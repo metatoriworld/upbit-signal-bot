@@ -8,7 +8,7 @@ TELEGRAM_TOKEN = "여기에_토큰_입력"
 CHAT_ID = "5054034975"
 
 def send_telegram(msg):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    url = f"https://api.telegram.org/bot{8636493325:AAG5p1YUGQ71xVuLi0h8iyiOswA2rYIS3yM}/sendMessage"
     requests.post(url, json={"chat_id": CHAT_ID, "text": msg, "parse_mode": "HTML"})
 
 def get_markets():
