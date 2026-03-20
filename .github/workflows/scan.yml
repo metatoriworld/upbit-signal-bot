@@ -1,0 +1,39 @@
+name: 업비트 주봉 스캔
+
+on:
+
+schedule:
+
+cron: '0 0 * * 1' # 매주 월요일 오전 9시
+
+workflow_dispatch:
+
+(한
+
+# 수동 실행 버튼도 생김
+
+jobs:
+
+scan:
+
+runs-on: ubuntu-latest
+
+steps:
+
+uses: actions/checkout@v3
+
+uses: actions/setup-python@v4
+
+with:
+
+python-version: '3.11'
+
+run: pip install requests
+
+run: python main.py
+
+env:
+
+TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+
+CHAT_ID: ${{ secrets.CHAT_ID }}
