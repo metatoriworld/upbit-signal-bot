@@ -15,9 +15,9 @@ def get_markets():
     res = requests.get(url)
     return [m["market"] for m in res.json() if m["market"].startswith("KRW-")]
 
-def get_weekly_candles(market):
-    url = "https://api.upbit.com/v1/candles/weeks"
-    res = requests.get(url, params={"market": market, "count": 70})
+def get_candles(market, interval="weeks", count=70):
+    url = f"https://api.upbit.com/v1/candles/{interval}"
+    res = requests.get(url, params={"market": market, "count": count})
     return res.json()
 
 def calc_ma(candles, period):
@@ -25,9 +25,9 @@ def calc_ma(candles, period):
         return None
     return sum(c["trade_price"] for c in candles[:period]) / period
 
-def check_signal(market):
+def check_signal(market, interval="weeks"):
     try:
-        candles = get_weekly_candles(market)
+        candles = get_candles(market, interval, 70)
         if len(candles) < 65:
             return None
         ma7  = calc_ma(candles, 7)
@@ -35,7 +35,7 @@ def check_signal(market):
         ma60 = calc_ma(candles, 60)
         if not all([ma7, ma30, ma60]):
             return None
-        latest = candles[0]
+        latest      = candles[0]
         open_price  = latest["opening_price"]
         close_price = latest["trade_price"]
         is_reverse      = ma60 > ma30 > ma7
@@ -43,23 +43,29 @@ def check_signal(market):
         body_pct        = abs(close_price - open_price) / open_price * 100
         is_small_candle = body_pct < 1.0
         if is_reverse and is_below_ma7 and is_small_candle:
-            return {"market": market, "close": close_price, "ma7": ma7, "ma30": ma30, "ma60": ma60, "body_pct": body_pct}
+            return {
+                "market": market,
+                "close": close_price,
+                "ma7": ma7,
+                "ma30": ma30,
+                "ma60": ma60,
+                "body_pct": body_pct
+            }
     except Exception as e:
         print(f"{market} 오류: {e}")
     return None
 
-def scan_all():
-    print(f"스캔 시작: {datetime.now()}")
-    send_telegram("🔍 업비트 주봉 스캔 시작...")
+def scan_all(interval, label):
+    print(f"{label} 스캔 시작: {datetime.now()}")
     markets = get_markets()
     signals = []
     for market in markets:
-        result = check_signal(market)
+        result = check_signal(market, interval)
         if result:
             signals.append(result)
         time.sleep(0.1)
     if signals:
-        msg = f"📊 <b>주봉 스캔 완료</b> — {datetime.now().strftime('%Y.%m.%d')}\n"
+        msg = f"📊 <b>{label} 스캔 완료</b> — {datetime.now().strftime('%Y.%m.%d')}\n"
         msg += f"총 {len(markets)}개 중 <b>{len(signals)}개 신호</b>\n\n"
         for s in signals:
             coin = s["market"].replace("KRW-", "")
@@ -71,7 +77,9 @@ def scan_all():
             msg += f"   몸통: {s['body_pct']:.2f}%\n\n"
         send_telegram(msg)
     else:
-        send_telegram(f"📊 스캔 완료 — 신호 없음 ({len(markets)}개 검사)")
-    print("스캔 완료!")
+        send_telegram(f"📊 {label} 스캔 완료 — 신호 없음 ({len(markets)}개 검사)")
+    print(f"{label} 스캔 완료!")
 
-scan_all()
+send_telegram("🔍 주봉 + 일봉 스캔 시작...")
+scan_all("weeks", "주봉")
+scan_all("days", "일봉")
